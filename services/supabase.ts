@@ -15,3 +15,24 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     detectSessionInUrl: false,
   },
 });
+
+// Test function to verify connection
+export const testSupabaseConnection = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('business_profiles')
+      .select('count')
+      .limit(1);
+    
+    if (error) {
+      console.error('Supabase connection test failed:', error.message);
+      return false;
+    }
+    
+    console.log('Supabase connection test successful');
+    return true;
+  } catch (error) {
+    console.error('Supabase connection test error:', error);
+    return false;
+  }
+};

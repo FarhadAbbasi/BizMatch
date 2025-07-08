@@ -9,6 +9,7 @@ export default function EditProfile({ navigation }: MainScreenProps<'EditProfile
   const { user, setError } = useSession();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [profileId, setProfileId] = useState<string | null>(null);
   const [form, setForm] = useState<Omit<BusinessProfile, 'id' | 'owner_uid' | 'created_at' | 'updated_at'>>({
     name: '',
     industry: '',
@@ -36,6 +37,7 @@ export default function EditProfile({ navigation }: MainScreenProps<'EditProfile
       if (error) throw error;
       if (data) {
         const { id, owner_uid, created_at, updated_at, ...profileData } = data;
+        setProfileId(id);
         setForm(profileData);
       }
     } catch (error) {
@@ -85,15 +87,20 @@ export default function EditProfile({ navigation }: MainScreenProps<'EditProfile
       return;
     }
 
+    if (!profileId) {
+      Alert.alert('Error', 'Could not find existing profile');
+      return;
+    }
+
     try {
       setSaving(true);
       const { error } = await supabase
         .from('business_profiles')
-        .upsert({
-          owner_uid: user?.id,
+        .update({
           ...form,
           updated_at: new Date().toISOString(),
-        });
+        })
+        .eq('id', profileId);
 
       if (error) throw error;
 

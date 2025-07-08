@@ -11,19 +11,32 @@ import { supabase } from '../services/supabase';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
-  const { user, hasCompletedOnboarding, setUser, setLoading, isLoading } = useSession();
+  const { user, hasCompletedOnboarding, setUser, setOnboardingComplete, setLoading, isLoading } = useSession();
 
   useEffect(() => {
     // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      
+      if (currentUser) {
+        // Check if user has a business profile
+        const { data: profile } = await supabase
+          .from('business_profiles')
+          .select('id')
+          .eq('owner_uid', currentUser.id)
+          .single();
+        
+        setOnboardingComplete(!!profile);
+      }
+      
       setLoading(false);
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [setUser, setLoading]);
+  }, [setUser, setLoading, setOnboardingComplete]);
 
   if (isLoading) {
     // You can return a loading screen here
