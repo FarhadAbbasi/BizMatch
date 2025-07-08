@@ -4,39 +4,35 @@ export type AuthStackParamList = {
   SignIn: undefined;
   SignUp: undefined;
   ForgotPassword: undefined;
+  ResetPassword: undefined;
 };
 
 export type MainStackParamList = {
   Swiper: undefined;
-  BusinessDetails: {
-    businessId: string;
-  };
-  Filters: undefined;
-  Chat: {
-    matchId: string;
-    businessId: string;
-  };
   Profile: undefined;
   EditProfile: undefined;
+  BusinessDetails: { id: string };
+  Chat: { matchId: string };
+  Filters: undefined;
 };
 
 export type RootStackParamList = {
   Auth: undefined;
-  Main: undefined;
   Onboarding: undefined;
+  Main: undefined;
 };
 
-export type AuthScreenProps<T extends keyof AuthStackParamList> = NativeStackScreenProps<
-  AuthStackParamList,
-  T
->;
+export type AuthScreenProps<T extends keyof AuthStackParamList> = {
+  navigation: any;
+  route: any;
+};
 
-export type MainScreenProps<T extends keyof MainStackParamList> = NativeStackScreenProps<
-  MainStackParamList,
-  T
->;
+export type MainScreenProps<T extends keyof MainStackParamList> = {
+  navigation: any;
+  route: any;
+};
 
-export type RootScreenProps<T extends keyof RootStackParamList> = NativeStackScreenProps<
-  RootStackParamList,
-  T
->; 
+export type RootScreenProps<T extends keyof RootStackParamList> = {
+  navigation: any;
+  route: any;
+}; 

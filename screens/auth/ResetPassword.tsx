@@ -4,28 +4,39 @@ import { AuthScreenProps } from '../../navigation/types';
 import { supabase } from '../../services/supabase';
 import { useSession } from '../../stores/useSession';
 
-export default function ForgotPassword({ navigation }: AuthScreenProps<'ForgotPassword'>) {
-  const [email, setEmail] = useState('');
+export default function ResetPassword({ navigation }: AuthScreenProps<'ResetPassword'>) {
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { setError } = useSession();
 
-  const handleResetPassword = async () => {
-    if (!email) {
-      Alert.alert('Error', 'Please enter your email address');
+  const handlePasswordReset = async () => {
+    if (!password || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long');
       return;
     }
 
     try {
       setLoading(true);
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'com.bizmatch://auth/reset-password',
+      const { error } = await supabase.auth.updateUser({
+        password: password
       });
 
       if (error) throw error;
 
       Alert.alert(
         'Success',
-        'Check your email for password reset instructions',
+        'Your password has been reset successfully',
         [
           {
             text: 'OK',
@@ -46,39 +57,36 @@ export default function ForgotPassword({ navigation }: AuthScreenProps<'ForgotPa
     <View className="flex-1 bg-white p-4">
       <View className="flex-1 justify-center">
         <Text className="text-3xl font-bold text-center mb-8">
-          Reset Password
+          Create New Password
         </Text>
 
         <Text className="text-gray-600 text-center mb-8">
-          Enter your email address and we'll send you instructions to reset your password.
+          Enter your new password below.
         </Text>
 
         <TextInput
+          className="bg-gray-100 p-4 rounded-lg mb-4"
+          placeholder="New Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+
+        <TextInput
           className="bg-gray-100 p-4 rounded-lg mb-6"
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
+          placeholder="Confirm New Password"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry
         />
 
         <TouchableOpacity
-          className="bg-blue-500 p-4 rounded-lg mb-4"
-          onPress={handleResetPassword}
+          className="bg-blue-500 p-4 rounded-lg"
+          onPress={handlePasswordReset}
           disabled={loading}
         >
           <Text className="text-white text-center font-semibold">
-            {loading ? 'Sending...' : 'Send Reset Instructions'}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          className="mt-4"
-          onPress={() => navigation.navigate('SignIn')}
-        >
-          <Text className="text-center text-gray-600">
-            Remember your password?{' '}
-            <Text className="text-blue-500 font-semibold">Sign In</Text>
+            {loading ? 'Updating...' : 'Update Password'}
           </Text>
         </TouchableOpacity>
       </View>

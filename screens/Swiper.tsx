@@ -1,15 +1,18 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Dimensions, StyleSheet } from 'react-native';
 import Swiper from 'react-native-deck-swiper';
 import { MainScreenProps } from '../navigation/types';
 import { useSwipe } from '../stores/useSwipe';
 import { useSession } from '../stores/useSession';
+import { BusinessCard } from '../components';
+import { useColors } from '../theme/ThemeProvider';
 
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = width * 0.9;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const VERTICAL_PADDING = 20;
 
 export default function SwiperScreen({ navigation }: MainScreenProps<'Swiper'>) {
   const swiperRef = useRef<Swiper<any>>(null);
+  const colors = useColors();
   const {
     businesses,
     currentIndex,
@@ -39,21 +42,21 @@ export default function SwiperScreen({ navigation }: MainScreenProps<'Swiper'>) 
 
   if (isLoading) {
     return (
-      <View className="flex-1 justify-center items-center">
-        <ActivityIndicator size="large" color="#0000ff" />
+      <View style={styles.container}>
+        <BusinessCard isLoading />
       </View>
     );
   }
 
   if (error) {
     return (
-      <View className="flex-1 justify-center items-center p-4">
-        <Text className="text-red-500 text-center mb-4">{error}</Text>
+      <View style={styles.container}>
+        <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity
-          className="bg-blue-500 px-6 py-3 rounded-lg"
+          style={[styles.retryButton, { backgroundColor: colors.primary[500] }]}
           onPress={fetchBusinesses}
         >
-          <Text className="text-white">Retry</Text>
+          <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
@@ -61,69 +64,46 @@ export default function SwiperScreen({ navigation }: MainScreenProps<'Swiper'>) 
 
   if (!businesses.length) {
     return (
-      <View className="flex-1 justify-center items-center p-4">
-        <Text className="text-xl text-center mb-4">
+      <View style={styles.container}>
+        <Text style={styles.emptyText}>
           No more businesses to show.
         </Text>
         <TouchableOpacity
-          className="bg-blue-500 px-6 py-3 rounded-lg"
+          style={[styles.retryButton, { backgroundColor: colors.primary[500] }]}
           onPress={fetchBusinesses}
         >
-          <Text className="text-white">Refresh</Text>
+          <Text style={styles.retryButtonText}>Refresh</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-white">
-      <View className="flex-row justify-between items-center p-4">
+    <View style={styles.container}>
+      <View style={styles.header}>
         <TouchableOpacity
-          className="bg-gray-100 p-2 rounded-full"
+          style={[styles.iconButton, { backgroundColor: colors.neutral[100] }]}
           onPress={() => navigation.navigate('Profile')}
         >
-          <Text className="text-lg">👤</Text>
+          <Text style={styles.iconText}>👤</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          className="bg-gray-100 p-2 rounded-full"
+          style={[styles.iconButton, { backgroundColor: colors.neutral[100] }]}
           onPress={() => navigation.navigate('Filters')}
         >
-          <Text className="text-lg">🔍</Text>
+          <Text style={styles.iconText}>🔍</Text>
         </TouchableOpacity>
       </View>
 
-      <View className="flex-1">
+      <View style={styles.swiperContainer}>
         <Swiper
           ref={swiperRef}
           cards={businesses}
           renderCard={(business) => (
-            <TouchableOpacity
-              className="bg-white rounded-xl shadow-lg overflow-hidden"
-              style={{ width: CARD_WIDTH }}
-              onPress={() => navigation.navigate('BusinessDetails', { businessId: business.id })}
-            >
-              <View className="p-4">
-                <Text className="text-2xl font-bold mb-2">{business.name}</Text>
-                <Text className="text-gray-600 mb-4">{business.industry}</Text>
-                
-                <Text className="text-gray-600 mb-2">Services:</Text>
-                <View className="flex-row flex-wrap mb-4">
-                  {business.services.slice(0, 3).map((service, index) => (
-                    <View
-                      key={index}
-                      className="bg-blue-100 rounded-full px-3 py-1 m-1"
-                    >
-                      <Text className="text-blue-800">{service}</Text>
-                    </View>
-                  ))}
-                  {business.services.length > 3 && (
-                    <Text className="text-gray-500 ml-2">+{business.services.length - 3} more</Text>
-                  )}
-                </View>
-
-                <Text className="text-gray-600">{business.location}</Text>
-              </View>
-            </TouchableOpacity>
+            <BusinessCard
+              business={business}
+              onPress={() => navigation.navigate('BusinessDetails', { id: business.id })}
+            />
           )}
           onSwiped={(cardIndex) => {
             setCurrentIndex(cardIndex + 1);
@@ -138,19 +118,22 @@ export default function SwiperScreen({ navigation }: MainScreenProps<'Swiper'>) 
           backgroundColor="transparent"
           stackSize={3}
           stackSeparation={15}
-          cardVerticalMargin={20}
-          cardHorizontalMargin={10}
+          cardVerticalMargin={VERTICAL_PADDING}
+          cardHorizontalMargin={0}
           animateOverlayLabelsOpacity
           animateCardOpacity
           swipeBackCard
+          verticalSwipe={false}
+          containerStyle={styles.swiperContainer}
           overlayLabels={{
             left: {
               title: 'NOPE',
               style: {
                 label: {
-                  backgroundColor: 'red',
+                  backgroundColor: colors.accent.error,
                   color: 'white',
                   fontSize: 24,
+                  fontWeight: 'bold',
                   borderRadius: 4,
                   padding: 10,
                 },
@@ -167,9 +150,10 @@ export default function SwiperScreen({ navigation }: MainScreenProps<'Swiper'>) 
               title: 'LIKE',
               style: {
                 label: {
-                  backgroundColor: '#4CAF50',
+                  backgroundColor: colors.accent.success,
                   color: 'white',
                   fontSize: 24,
+                  fontWeight: 'bold',
                   borderRadius: 4,
                   padding: 10,
                 },
@@ -186,21 +170,88 @@ export default function SwiperScreen({ navigation }: MainScreenProps<'Swiper'>) 
         />
       </View>
 
-      <View className="flex-row justify-around items-center p-4">
+      <View style={styles.footer}>
         <TouchableOpacity
-          className="bg-red-100 w-16 h-16 rounded-full items-center justify-center"
+          style={[styles.actionButton, { backgroundColor: colors.primary[100] }]}
           onPress={() => swiperRef.current?.swipeLeft()}
         >
-          <Text className="text-2xl">👎</Text>
+          <Text style={styles.actionButtonText}>👎</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          className="bg-green-100 w-16 h-16 rounded-full items-center justify-center"
+          style={[styles.actionButton, { backgroundColor: colors.primary[100] }]}
           onPress={() => swiperRef.current?.swipeRight()}
         >
-          <Text className="text-2xl">👍</Text>
+          <Text style={styles.actionButtonText}>👍</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'white',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 16,
+    paddingTop: 8,
+  },
+  swiperContainer: {
+    flex: 1,
+    marginTop: -VERTICAL_PADDING,
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconText: {
+    fontSize: 20,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+  },
+  actionButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionButtonText: {
+    fontSize: 32,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignSelf: 'center',
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+}); 

@@ -1,17 +1,33 @@
 import { create } from 'zustand';
-import { produce } from 'immer';
 import { supabase } from '../services/supabase';
+import { useSession } from './useSession';
+
+export interface BusinessHighlight {
+  title: string;
+  content: string;
+}
 
 export interface BusinessProfile {
   id: string;
   owner_uid: string;
   name: string;
+  description: string;
   industry: string;
   location: string;
   services: string[];
   tags: string[];
-  linkedin_url: string;
-  logo_url: string;
+  linkedin_url?: string;
+  logo_url?: string;
+  founded_date?: string;
+  company_size?: string;
+  website_url?: string;
+  banner_image_url?: string;
+  headquarters?: string;
+  funding_stage?: string;
+  revenue_range?: string;
+  tech_stack: string[];
+  looking_for: string[];
+  highlights: BusinessHighlight[];
   created_at: string;
   updated_at: string;
 }
@@ -27,17 +43,10 @@ interface SwipeState {
     services: string[];
     tags: string[];
   };
-  
-  // Actions
-  setBusinesses: (businesses: BusinessProfile[]) => void;
-  setCurrentIndex: (index: number) => void;
-  setLoading: (loading: boolean) => void;
-  setError: (error: string | null) => void;
   setFilters: (filters: SwipeState['filters']) => void;
-  
-  // API Actions
+  setCurrentIndex: (index: number) => void;
   fetchBusinesses: () => Promise<void>;
-  createSwipe: (businessId: string, direction: 'left' | 'right') => Promise<{ match: boolean; matchBusiness?: BusinessProfile }>;
+  createSwipe: (businessId: string, direction: 'left' | 'right') => Promise<{ match: boolean; matchBusiness: BusinessProfile | null }>;
 }
 
 export const useSwipe = create<SwipeState>((set, get) => ({
@@ -51,35 +60,26 @@ export const useSwipe = create<SwipeState>((set, get) => ({
     services: [],
     tags: [],
   },
-
-  setBusinesses: (businesses) => set(produce((state) => {
-    state.businesses = businesses;
-  })),
-
-  setCurrentIndex: (index) => set(produce((state) => {
-    state.currentIndex = index;
-  })),
-
-  setLoading: (loading) => set(produce((state) => {
-    state.isLoading = loading;
-  })),
-
-  setError: (error) => set(produce((state) => {
-    state.error = error;
-  })),
-
-  setFilters: (filters) => set(produce((state) => {
-    state.filters = filters;
-  })),
-
+  setFilters: (filters) => set({ filters }),
+  setCurrentIndex: (index) => set({ currentIndex: index }),
+  
   fetchBusinesses: async () => {
-    const { setLoading, setError, setBusinesses, filters } = get();
     try {
-      setLoading(true);
+      set({ isLoading: true, error: null });
+      
+      const session = await supabase.auth.getSession();
+      const currentUserId = session.data.session?.user?.id;
+      const { filters } = get();
+      
+      if (!currentUserId) {
+        throw new Error('User not authenticated');
+      }
+      
       let query = supabase
         .from('business_profiles')
-        .select('*');
-
+        .select('*')
+        .neq('owner_uid', currentUserId); // Don't show user's own business
+      
       // Apply filters
       if (filters.industries.length > 0) {
         query = query.in('industry', filters.industries);
@@ -88,35 +88,78 @@ export const useSwipe = create<SwipeState>((set, get) => ({
         query = query.in('location', filters.locations);
       }
       if (filters.services.length > 0) {
-        query = query.contains('services', filters.services);
+        query = query.overlaps('services', filters.services);
       }
       if (filters.tags.length > 0) {
-        query = query.contains('tags', filters.tags);
+        query = query.overlaps('tags', filters.tags);
       }
-
-      const { data, error } = await query.limit(50);
-
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
+        
       if (error) throw error;
-      setBusinesses(data);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to fetch businesses');
+      
+      set({ businesses: data || [] });
+    } catch (error: any) {
+      console.error('Error fetching businesses:', error);
+      set({ error: error?.message || 'Failed to fetch businesses' });
     } finally {
-      setLoading(false);
+      set({ isLoading: false });
     }
   },
-
+  
   createSwipe: async (businessId, direction) => {
-    const { setError } = get();
     try {
-      const { data, error } = await supabase.functions.invoke('create_like', {
-        body: { business_id: businessId, direction },
-      });
+      const session = await supabase.auth.getSession();
+      const currentUserId = session.data.session?.user?.id;
+      
+      if (!currentUserId) {
+        throw new Error('User not authenticated');
+      }
 
-      if (error) throw error;
-      return data;
+      const { data: swipe, error: swipeError } = await supabase
+        .from('swipes')
+        .insert([
+          {
+            user_id: currentUserId,
+            business_id: businessId,
+            direction,
+          },
+        ])
+        .select()
+        .single();
+
+      if (swipeError) throw swipeError;
+
+      // If it's a right swipe, check for a match
+      if (direction === 'right') {
+        const { data: matchBusiness, error: matchError } = await supabase
+          .from('business_profiles')
+          .select('*')
+          .eq('id', businessId)
+          .single();
+
+        if (matchError) throw matchError;
+
+        // Check if the other business has also swiped right on user's business
+        const { data: otherSwipe, error: otherSwipeError } = await supabase
+          .from('swipes')
+          .select('*')
+          .eq('user_id', matchBusiness.owner_uid)
+          .eq('direction', 'right')
+          .maybeSingle(); // Use maybeSingle() as there might not be a swipe yet
+
+        if (otherSwipeError) throw otherSwipeError;
+
+        return {
+          match: !!otherSwipe, // Match if other business has swiped right
+          matchBusiness: otherSwipe ? matchBusiness : null,
+        };
+      }
+
+      return { match: false, matchBusiness: null };
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to create swipe');
-      return { match: false };
+      console.error('Error creating swipe:', error);
+      throw error;
     }
   },
 })); 
