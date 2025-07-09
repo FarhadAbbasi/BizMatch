@@ -1,25 +1,34 @@
+import { NavigatorScreenParams } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
+export type MainTabParamList = {
+  SwiperTab: undefined;
+  FiltersTab: undefined;
+  ChatsTab: undefined;
+  ProfileTab: undefined;
+};
+
+export type MainStackParamList = {
+  MainTabs: NavigatorScreenParams<MainTabParamList>;
+  BusinessDetails: { id: string };
+  EditProfile: undefined;
+  ChatList: undefined;
+  Chat: { matchId: string; businessId: string };
+};
+
+export type MainStackScreenProps<T extends keyof MainStackParamList> = 
+  NativeStackScreenProps<MainStackParamList, T>;
+
 export type AuthStackParamList = {
-  SignIn: undefined;
-  SignUp: undefined;
+  Login: undefined;
+  Register: undefined;
   ForgotPassword: undefined;
   ResetPassword: undefined;
 };
 
-export type MainStackParamList = {
-  Swiper: undefined;
-  Profile: undefined;
-  EditProfile: undefined;
-  BusinessDetails: { id: string };
-  Chat: { matchId: string };
-  Filters: undefined;
-};
-
 export type RootStackParamList = {
-  Auth: undefined;
-  Onboarding: undefined;
-  Main: undefined;
+  Auth: NavigatorScreenParams<AuthStackParamList>;
+  Main: NavigatorScreenParams<MainStackParamList>;
 };
 
 export type AuthScreenProps<T extends keyof AuthStackParamList> = {

@@ -6,6 +6,7 @@ module.exports = {
     "./screens/**/*.{js,jsx,ts,tsx}",
     "./components/**/*.{js,jsx,ts,tsx}"
   ],
+  darkMode: 'class',  // Add this line
   theme: {
     extend: {},
   },
