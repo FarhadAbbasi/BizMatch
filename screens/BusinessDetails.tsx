@@ -9,6 +9,161 @@ import { format } from 'date-fns';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'white',
+  },
+  bannerContainer: {
+    height: 250,
+    width: '100%',
+    backgroundColor: '#f0f0f0',
+  },
+  bannerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  logoContainer: {
+    position: 'absolute',
+    bottom: -40,
+    left: 20,
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: 'white',
+    padding: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  logo: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+  },
+  content: {
+    flex: 1,
+    padding: 20,
+    paddingTop: 50,
+  },
+  name: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+    marginBottom: 4,
+  },
+  industry: {
+    fontSize: 18,
+    color: '#666',
+    marginBottom: 16,
+  },
+  metaContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 24,
+  },
+  companySizeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  companyIcon: {
+    fontSize: 16,
+  },
+  companySize: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  infoCard: {
+    marginBottom: 24,
+    padding: 16,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  infoLabel: {
+    fontSize: 15,
+    color: '#666',
+    fontWeight: '500',
+  },
+  infoValue: {
+    fontSize: 15,
+    color: '#1a1a1a',
+    fontWeight: '500',
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 12,
+  },
+  description: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#444',
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  highlightsContainer: {
+    gap: 12,
+  },
+  highlightCard: {
+    padding: 16,
+  },
+  highlightTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 8,
+  },
+  highlightContent: {
+    fontSize: 15,
+    color: '#666',
+    lineHeight: 22,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+});
+
 export default function BusinessDetails({ route, navigation }: MainScreenProps<'BusinessDetails'>) {
   const { id } = route.params;
   const [business, setBusiness] = useState<BusinessProfile | null>(null);
@@ -248,159 +403,4 @@ export default function BusinessDetails({ route, navigation }: MainScreenProps<'
       </View>
     </ScrollView>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  bannerContainer: {
-    height: 250,
-    width: '100%',
-    backgroundColor: '#f0f0f0',
-  },
-  bannerImage: {
-    width: '100%',
-    height: '100%',
-  },
-  logoContainer: {
-    position: 'absolute',
-    bottom: -40,
-    left: 20,
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    backgroundColor: 'white',
-    padding: 10,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  logo: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 10,
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-    paddingTop: 50,
-  },
-  name: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 4,
-  },
-  industry: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 16,
-  },
-  metaContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 24,
-  },
-  companySizeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  companyIcon: {
-    fontSize: 16,
-  },
-  companySize: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  infoCard: {
-    marginBottom: 24,
-    padding: 16,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-  },
-  infoLabel: {
-    fontSize: 15,
-    color: '#666',
-    fontWeight: '500',
-  },
-  infoValue: {
-    fontSize: 15,
-    color: '#1a1a1a',
-    fontWeight: '500',
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 12,
-  },
-  description: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#444',
-  },
-  badgeContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  highlightsContainer: {
-    gap: 12,
-  },
-  highlightCard: {
-    padding: 16,
-  },
-  highlightTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 8,
-  },
-  highlightContent: {
-    fontSize: 15,
-    color: '#666',
-    lineHeight: 22,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 24,
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-}); 
+} 

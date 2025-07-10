@@ -7,40 +7,36 @@ import { MainStack } from './MainStack';
 import Onboarding from '../screens/Onboarding';
 import { useSession } from '../stores/useSession';
 import { supabase } from '../services/supabase';
+import { View, ActivityIndicator } from 'react-native';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
-  const { user, hasCompletedOnboarding, setUser, setOnboardingComplete, setLoading, isLoading } = useSession();
+  const { user, hasCompletedOnboarding, setUser, setOnboardingComplete, setLoading, isLoading, initialize, reset } = useSession();
 
   useEffect(() => {
+    initialize();
+
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      
-      if (currentUser) {
-        // Check if user has a business profile
-        const { data: profile } = await supabase
-          .from('business_profiles')
-          .select('id')
-          .eq('owner_uid', currentUser.id)
-          .single();
-        
-        setOnboardingComplete(!!profile);
+      if (event === 'SIGNED_OUT') {
+        reset();
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        initialize();
       }
-      
-      setLoading(false);
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [setUser, setLoading, setOnboardingComplete]);
+  }, []);
 
   if (isLoading) {
-    // You can return a loading screen here
-    return null;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#0891b2" />
+      </View>
+    );
   }
 
   return (

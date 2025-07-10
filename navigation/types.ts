@@ -1,5 +1,7 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { CompositeScreenProps } from '@react-navigation/native';
 
 export type MainTabParamList = {
   SwiperTab: undefined;
@@ -12,12 +14,8 @@ export type MainStackParamList = {
   MainTabs: NavigatorScreenParams<MainTabParamList>;
   BusinessDetails: { id: string };
   EditProfile: undefined;
-  ChatList: undefined;
   Chat: { matchId: string; businessId: string };
 };
-
-export type MainStackScreenProps<T extends keyof MainStackParamList> = 
-  NativeStackScreenProps<MainStackParamList, T>;
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -27,21 +25,21 @@ export type AuthStackParamList = {
 };
 
 export type RootStackParamList = {
+  Onboarding: undefined;
   Auth: NavigatorScreenParams<AuthStackParamList>;
   Main: NavigatorScreenParams<MainStackParamList>;
 };
 
-export type AuthScreenProps<T extends keyof AuthStackParamList> = {
-  navigation: any;
-  route: any;
-};
+export type RootScreenProps<T extends keyof RootStackParamList> = 
+  NativeStackScreenProps<RootStackParamList, T>;
 
-export type MainScreenProps<T extends keyof MainStackParamList> = {
-  navigation: any;
-  route: any;
-};
+export type AuthScreenProps<T extends keyof AuthStackParamList> = 
+  NativeStackScreenProps<AuthStackParamList, T>;
 
-export type RootScreenProps<T extends keyof RootStackParamList> = {
-  navigation: any;
-  route: any;
-}; 
+export type MainScreenProps<T extends keyof MainStackParamList> = 
+  NativeStackScreenProps<MainStackParamList, T>;
+
+export type TabScreenProps<T extends keyof MainTabParamList> = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, T>,
+  NativeStackScreenProps<MainStackParamList>
+>; 

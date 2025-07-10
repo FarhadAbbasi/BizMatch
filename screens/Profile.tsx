@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Image, StyleSheet, Platform, Dimensions } from 'react-native';
-import { MainScreenProps } from '../navigation/types';
+import { TabScreenProps } from '../navigation/types';
 import { supabase } from '../services/supabase';
 import { useSession } from '../stores/useSession';
 import { BusinessProfile } from '../stores/useSwipe';
@@ -10,27 +10,39 @@ import { format } from 'date-fns';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-export default function Profile({ navigation }: MainScreenProps<'Profile'>) {
+export default function ProfileScreen({ navigation }: TabScreenProps<'ProfileTab'>) {
   const { user } = useSession();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
 
   useEffect(() => {
-    fetchProfile();
-  }, []);
+    if (user?.id) {
+      fetchProfile();
+    } else {
+      setLoading(false);
+      setError('Please sign in to view your profile');
+    }
+  }, [user?.id]);
 
   const fetchProfile = async () => {
     try {
-      const { data, error } = await supabase
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+
+      const { data, error: fetchError } = await supabase
         .from('business_profiles')
         .select('*')
-        .eq('owner_uid', user?.id)
+        .eq('owner_uid', user.id)
         .single();
 
-      if (error) throw error;
+      if (fetchError) throw fetchError;
       setProfile(data);
-    } catch (error) {
+      setError(null);
+    } catch (error: any) {
       console.error('Error fetching profile:', error);
+      setError(error?.message || 'Failed to fetch profile');
     } finally {
       setLoading(false);
     }
@@ -40,6 +52,20 @@ export default function Profile({ navigation }: MainScreenProps<'Profile'>) {
     return (
       <View className="flex-1 justify-center items-center">
         <Text>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="flex-1 justify-center items-center p-4">
+        <Text className="text-red-500 text-center mb-4">{error}</Text>
+        <TouchableOpacity
+          className="bg-primary-500 px-6 py-3 rounded-lg"
+          onPress={() => user?.id && fetchProfile()}
+        >
+          <Text className="text-white font-semibold">Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }

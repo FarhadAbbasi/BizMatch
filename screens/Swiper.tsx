@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Swiper from 'react-native-deck-swiper';
-import { MainScreenProps } from '../navigation/types';
+import { TabScreenProps } from '../navigation/types';
 import { useSwipe } from '../stores/useSwipe';
 import { useSession } from '../stores/useSession';
 import { BusinessCard } from '../components';
@@ -14,7 +14,7 @@ import Animated, {
 
 const VERTICAL_PADDING = 12;
 
-export default function SwiperScreen({ navigation }: MainScreenProps<'Swiper'>) {
+export default function SwiperScreen({ navigation }: TabScreenProps<'SwiperTab'>) {
   const swiperRef = useRef<Swiper<any>>(null);
   const colors = useColors();
   const insets = useSafeAreaInsets();

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
-import { MainScreenProps } from '../navigation/types';
+import { TabScreenProps } from '../navigation/types';
 import { useSwipe } from '../stores/useSwipe';
 
-export default function Filters({ navigation }: MainScreenProps<'Filters'>) {
+export default function FiltersScreen({ navigation }: TabScreenProps<'FiltersTab'>) {
   const { filters, setFilters, fetchBusinesses } = useSwipe();
   const [newIndustry, setNewIndustry] = useState('');
   const [newLocation, setNewLocation] = useState('');

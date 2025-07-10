@@ -5,6 +5,7 @@ import { supabase } from '../services/supabase';
 import { useSession } from '../stores/useSession';
 import { BusinessProfile, BusinessHighlight } from '../stores/useSwipe';
 import { Card } from '../components/Card';
+import { Ionicons } from '@expo/vector-icons';
 
 interface EditProfileForm extends Omit<BusinessProfile, 'id' | 'owner_uid' | 'created_at' | 'updated_at'> {
   name: string;
@@ -204,6 +205,16 @@ export default function EditProfile({ navigation }: MainScreenProps<'EditProfile
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error logging out:', error);
+      Alert.alert('Error', 'Failed to log out. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -214,6 +225,17 @@ export default function EditProfile({ navigation }: MainScreenProps<'EditProfile
 
   return (
     <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Edit Profile</Text>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+        >
+          <Ionicons name="log-out-outline" size={24} color="#EF4444" />
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.content}>
         <Text style={styles.title}>Edit Business Profile</Text>
 
@@ -551,14 +573,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  content: {
-    padding: 20,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    color: '#1a1a1a',
+    fontSize: 24,
+    fontWeight: '600',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+  },
+  logoutText: {
+    marginLeft: 8,
+    color: '#EF4444',
+    fontWeight: '500',
+  },
+  content: {
+    padding: 20,
   },
   formSection: {
     marginBottom: 32,

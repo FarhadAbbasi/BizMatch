@@ -75,22 +75,48 @@ export const useSwipe = create<SwipeState>((set, get) => ({
         throw new Error('User not authenticated');
       }
       
+      // First, get the user's business profile
+      const { data: userProfile, error: profileError } = await supabase
+        .from('business_profiles')
+        .select('id')
+        .eq('owner_uid', currentUserId)
+        .single();
+
+      if (profileError && profileError.code !== 'PGRST116') {
+        throw profileError;
+      }
+
+      // Get already swiped business IDs
+      const { data: swipes, error: swipesError } = await supabase
+        .from('swipes')
+        .select('target_business_id')
+        .eq('swiper_uid', currentUserId);
+
+      if (swipesError) throw swipesError;
+
+      const swipedBusinessIds = swipes?.map(s => s.target_business_id) || [];
+      
       let query = supabase
         .from('business_profiles')
         .select('*')
-        .neq('owner_uid', currentUserId); // Don't show user's own business
+        .neq('owner_uid', currentUserId);
+
+      // Exclude already swiped businesses
+      if (swipedBusinessIds.length > 0) {
+        query = query.not('id', 'in', `(${swipedBusinessIds.join(',')})`);
+      }
       
       // Apply filters
-      if (filters.industries.length > 0) {
+      if (filters.industries?.length > 0) {
         query = query.in('industry', filters.industries);
       }
-      if (filters.locations.length > 0) {
+      if (filters.locations?.length > 0) {
         query = query.in('location', filters.locations);
       }
-      if (filters.services.length > 0) {
+      if (filters.services?.length > 0) {
         query = query.overlaps('services', filters.services);
       }
-      if (filters.tags.length > 0) {
+      if (filters.tags?.length > 0) {
         query = query.overlaps('tags', filters.tags);
       }
       
@@ -98,10 +124,10 @@ export const useSwipe = create<SwipeState>((set, get) => ({
         
       if (error) throw error;
       
-      set({ businesses: data || [] });
+      set({ businesses: data || [], error: null });
     } catch (error: any) {
       console.error('Error fetching businesses:', error);
-      set({ error: error?.message || 'Failed to fetch businesses' });
+      set({ error: error.message || 'Failed to fetch businesses' });
     } finally {
       set({ isLoading: false });
     }
@@ -116,15 +142,14 @@ export const useSwipe = create<SwipeState>((set, get) => ({
         throw new Error('User not authenticated');
       }
 
-      const { data: swipe, error: swipeError } = await supabase
+      // First, create the swipe
+      const { error: swipeError } = await supabase
         .from('swipes')
-        .insert([
-          {
-            user_id: currentUserId,
-            business_id: businessId,
-            direction,
-          },
-        ])
+        .insert([{
+          swiper_uid: currentUserId,
+          target_business_id: businessId,
+          direction,
+        }])
         .select()
         .single();
 
@@ -132,34 +157,33 @@ export const useSwipe = create<SwipeState>((set, get) => ({
 
       // If it's a right swipe, check for a match
       if (direction === 'right') {
-        const { data: matchBusiness, error: matchError } = await supabase
-          .from('business_profiles')
-          .select('*')
-          .eq('id', businessId)
-          .single();
-
-        if (matchError) throw matchError;
-
-        // Check if the other business has also swiped right on user's business
-        const { data: otherSwipe, error: otherSwipeError } = await supabase
+        const { data: matchData, error: matchError } = await supabase
           .from('swipes')
-          .select('*')
-          .eq('user_id', matchBusiness.owner_uid)
+          .select('*, business_profiles(*)')
+          .eq('swiper_uid', businessId)
+          .eq('target_business_id', currentUserId)
           .eq('direction', 'right')
-          .maybeSingle(); // Use maybeSingle() as there might not be a swipe yet
+          .maybeSingle();
 
-        if (otherSwipeError) throw otherSwipeError;
+        if (matchError && matchError.code !== 'PGRST116') {
+          throw matchError;
+        }
 
-        return {
-          match: !!otherSwipe, // Match if other business has swiped right
-          matchBusiness: otherSwipe ? matchBusiness : null,
-        };
+        if (matchData) {
+          return {
+            match: true,
+            matchBusiness: matchData.business_profiles
+          };
+        }
       }
 
-      return { match: false, matchBusiness: null };
-    } catch (error) {
+      return {
+        match: false,
+        matchBusiness: null
+      };
+    } catch (error: any) {
       console.error('Error creating swipe:', error);
       throw error;
     }
-  },
+  }
 })); 

@@ -1,75 +1,67 @@
 import { create } from 'zustand';
-import { produce } from 'immer';
-import { supabase } from '../services/supabase';
 import { User } from '@supabase/supabase-js';
+import { supabase } from '../services/supabase';
 
 interface SessionState {
   user: User | null;
-  hasCompletedOnboarding: boolean;
-  linkedInToken: string | null;
-  linkedInRefreshToken: string | null;
-  linkedInExpiresAt: number | null;
   isLoading: boolean;
+  hasCompletedOnboarding: boolean;
   error: string | null;
-  
-  // Actions
   setUser: (user: User | null) => void;
+  setLoading: (isLoading: boolean) => void;
   setOnboardingComplete: (completed: boolean) => void;
-  setLinkedInTokens: (tokens: { 
-    access_token: string; 
-    refresh_token: string; 
-    expires_at: number; 
-  }) => void;
-  setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  signOut: () => Promise<void>;
+  reset: () => void;
+  initialize: () => Promise<void>;
 }
 
-export const useSession = create<SessionState>((set) => ({
+export const useSession = create<SessionState>((set, get) => ({
   user: null,
-  hasCompletedOnboarding: false,
-  linkedInToken: null,
-  linkedInRefreshToken: null,
-  linkedInExpiresAt: null,
   isLoading: true,
+  hasCompletedOnboarding: false,
   error: null,
-
-  setUser: (user) => set(produce((state) => {
-    state.user = user;
-  })),
-
-  setOnboardingComplete: (completed) => set(produce((state) => {
-    state.hasCompletedOnboarding = completed;
-  })),
-
-  setLinkedInTokens: (tokens) => set(produce((state) => {
-    state.linkedInToken = tokens.access_token;
-    state.linkedInRefreshToken = tokens.refresh_token;
-    state.linkedInExpiresAt = tokens.expires_at;
-  })),
-
-  setLoading: (loading) => set(produce((state) => {
-    state.isLoading = loading;
-  })),
-
-  setError: (error) => set(produce((state) => {
-    state.error = error;
-  })),
-
-  signOut: async () => {
+  setUser: (user) => set({ user, error: null }),
+  setLoading: (isLoading) => set({ isLoading }),
+  setOnboardingComplete: (completed) => set({ hasCompletedOnboarding: completed }),
+  setError: (error) => set({ error }),
+  reset: () => set({ 
+    user: null, 
+    isLoading: false, 
+    hasCompletedOnboarding: false, 
+    error: null 
+  }),
+  initialize: async () => {
     try {
-      await supabase.auth.signOut();
-      set(produce((state) => {
-        state.user = null;
-        state.linkedInToken = null;
-        state.linkedInRefreshToken = null;
-        state.linkedInExpiresAt = null;
-        state.hasCompletedOnboarding = false;
-      }));
-    } catch (error) {
-      set(produce((state) => {
-        state.error = 'Failed to sign out';
-      }));
+      set({ isLoading: true, error: null });
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) throw error;
+      
+      const currentUser = session?.user ?? null;
+      set({ user: currentUser });
+
+      if (currentUser) {
+        const { data: profile, error: profileError } = await supabase
+          .from('business_profiles')
+          .select('id')
+          .eq('owner_uid', currentUser.id)
+          .single();
+
+        if (profileError && profileError.code !== 'PGRST116') {
+          throw profileError;
+        }
+
+        set({ hasCompletedOnboarding: !!profile });
+      }
+    } catch (error: any) {
+      console.error('Session initialization error:', error);
+      set({ 
+        error: error.message || 'Failed to initialize session',
+        user: null,
+        hasCompletedOnboarding: false
+      });
+    } finally {
+      set({ isLoading: false });
     }
-  },
+  }
 })); 

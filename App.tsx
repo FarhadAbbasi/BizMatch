@@ -1,25 +1,35 @@
-import 'react-native-gesture-handler';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-url-polyfill/auto';
-import { StatusBar } from 'expo-status-bar';
-import { RootNavigator } from './navigation/RootNavigator';
+import 'react-native-gesture-handler';
+import { useEffect, useState } from 'react';
+import { View } from 'react-native';
+import { Session } from '@supabase/supabase-js';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import AppNavigator from './navigation/AppNavigator';
+import { supabase } from './services/supabase';
 import { ThemeProvider } from './theme/ThemeProvider';
 import './global.css';
 
 export default function App() {
+  const [session, setSession] = useState<Session | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+  }, []);
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <SafeAreaProvider>
       <ThemeProvider>
-        <SafeAreaProvider>
-          <StatusBar style="auto" />
-          <RootNavigator />
-        </SafeAreaProvider>
+        <AppNavigator session={session} />
       </ThemeProvider>
-    </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }
-
 
 
 
@@ -43,4 +53,5 @@ export default function App() {
 //     </>
 //   );
 // }
+
 
