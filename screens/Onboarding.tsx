@@ -17,6 +17,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useColors } from '../theme/ThemeProvider';
 import type { RootScreenProps } from '../navigation/types';
+import { useSession } from '../stores/useSession';
 
 const AnimatedScrollView = Animated.createAnimatedComponent(Animated.ScrollView);
 
@@ -24,17 +25,17 @@ const ONBOARDING_DATA = [
   {
     title: 'Find Your Perfect Match',
     description: 'Discover businesses that align with your goals and vision. Swipe right to connect, left to pass.',
-    image: require('../assets/logo.png'),
+    image: require('../assets/bizmatch.png'),
   },
   {
     title: 'Instant Business Chat',
     description: 'When you match with a business, start a conversation instantly to explore collaboration opportunities.',
-    image: require('../assets/logo.png'),
+    image: require('../assets/bizmatch.png'),
   },
   {
     title: 'Smart Recommendations',
     description: 'Our AI-powered system learns your preferences to suggest the most relevant business matches.',
-    image: require('../assets/logo.png'),
+    image: require('../assets/bizmatch.png'),
   },
 ];
 
@@ -45,6 +46,7 @@ export default function OnboardingScreen({ navigation }: RootScreenProps<'Onboar
   const scrollX = useSharedValue(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollViewRef = useRef<Animated.ScrollView>(null);
+  const { setOnboardingComplete } = useSession();
 
   const renderDot = (index: number) => {
     const dotStyle = useAnimatedStyle(() => {
@@ -163,8 +165,13 @@ export default function OnboardingScreen({ navigation }: RootScreenProps<'Onboar
     },
   });
 
+  const completeOnboarding = () => {
+    setOnboardingComplete(true);
+    // The RootNavigator will automatically navigate to Main when hasCompletedOnboarding is true
+  };
+
   const handleSkip = () => {
-    navigation.replace('Auth');
+    completeOnboarding();
   };
 
   const handleNext = () => {
@@ -175,7 +182,7 @@ export default function OnboardingScreen({ navigation }: RootScreenProps<'Onboar
       });
       setCurrentIndex(currentIndex + 1);
     } else {
-      navigation.replace('Auth');
+      completeOnboarding();
     }
   };
 

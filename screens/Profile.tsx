@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, StyleSheet, Platform, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image, StyleSheet, Platform, Dimensions, Alert } from 'react-native';
 import { TabScreenProps } from '../navigation/types';
 import { supabase } from '../services/supabase';
 import { useSession } from '../stores/useSession';
@@ -7,44 +7,47 @@ import { BusinessProfile } from '../stores/useSwipe';
 import { Card } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { format } from 'date-fns';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function ProfileScreen({ navigation }: TabScreenProps<'ProfileTab'>) {
-  const { user } = useSession();
+  const { user, reset } = useSession();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
 
   useEffect(() => {
-    if (user?.id) {
-      fetchProfile();
-    } else {
-      setLoading(false);
-      setError('Please sign in to view your profile');
-    }
-  }, [user?.id]);
+    fetchProfile();
+  }, []);
 
   const fetchProfile = async () => {
     try {
-      if (!user?.id) {
-        throw new Error('User not authenticated');
-      }
-
-      const { data, error: fetchError } = await supabase
+      const { data, error } = await supabase
         .from('business_profiles')
         .select('*')
-        .eq('owner_uid', user.id)
+        .eq('owner_uid', user?.id)
         .single();
 
-      if (fetchError) throw fetchError;
-      setProfile(data);
-      setError(null);
-    } catch (error: any) {
+      if (!error) {
+        setProfile(data);
+      }
+    } catch (error) {
       console.error('Error fetching profile:', error);
-      setError(error?.message || 'Failed to fetch profile');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      // Reset the session store state after successful logout
+      reset();
+    } catch (error) {
+      console.error('Error logging out:', error);
+      Alert.alert('Error', 'Failed to log out. Please try again.');
     }
   };
 
@@ -56,22 +59,29 @@ export default function ProfileScreen({ navigation }: TabScreenProps<'ProfileTab
     );
   }
 
-  if (error) {
+  if (!profile) {
     return (
       <View className="flex-1 justify-center items-center p-4">
-        <Text className="text-red-500 text-center mb-4">{error}</Text>
+        <Text className="text-xl font-semibold text-center mb-2">Welcome to BizMatch!</Text>
+        <Text className="text-base text-center text-neutral-600 mb-6">
+          Create your business profile to start matching with potential partners.
+        </Text>
         <TouchableOpacity
           className="bg-primary-500 px-6 py-3 rounded-lg"
-          onPress={() => user?.id && fetchProfile()}
+          onPress={() => navigation.navigate('EditProfile')}
         >
-          <Text className="text-white font-semibold">Retry</Text>
+          <Text className="text-white font-semibold">Create Profile</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      contentContainerStyle={{ flexGrow: 1 }}
+      showsVerticalScrollIndicator={true}
+    >
       {/* Banner and Logo */}
       <View style={styles.bannerContainer}>
         <Image
@@ -89,18 +99,27 @@ export default function ProfileScreen({ navigation }: TabScreenProps<'ProfileTab
       </View>
 
       <View style={styles.content}>
-        {/* Header with Edit Button */}
+        {/* Header with Edit Button and Logout */}
         <View style={styles.header}>
           <View>
             <Text style={styles.name}>{profile?.name}</Text>
             <Text style={styles.industry}>{profile?.industry}</Text>
           </View>
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => navigation.navigate('EditProfile')}
-          >
-            <Text style={styles.editButtonText}>Edit Profile</Text>
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => navigation.navigate('EditProfile')}
+            >
+              <Text style={styles.editButtonText}>Edit Profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={handleLogout}
+            >
+              <Ionicons name="log-out-outline" size={24} color="#EF4444" />
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Meta Information */}
@@ -216,8 +235,8 @@ export default function ProfileScreen({ navigation }: TabScreenProps<'ProfileTab
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: 'white',
+    flexGrow: 1,
   },
   bannerContainer: {
     height: 250,
@@ -255,15 +274,19 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   content: {
-    flex: 1,
     padding: 20,
     paddingTop: 50,
+    paddingBottom: 100, // Add extra padding at the bottom
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 16,
+  },
+  headerButtons: {
+    alignItems: 'flex-end',
+    gap: 8,
   },
   name: {
     fontSize: 28,
@@ -284,6 +307,16 @@ const styles = StyleSheet.create({
   editButtonText: {
     color: 'white',
     fontWeight: '600',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+  },
+  logoutText: {
+    marginLeft: 8,
+    color: '#EF4444',
+    fontWeight: '500',
   },
   metaContainer: {
     flexDirection: 'row',

@@ -29,7 +29,7 @@ export default function SignUp({ navigation }: AuthScreenProps<'SignUp'>) {
         'Success',
         'Registration successful! Please check your email for verification.'
       );
-      navigation.navigate('SignIn');
+      navigation.navigate('Login');
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'An error occurred');
       setError(error instanceof Error ? error.message : 'An error occurred');
@@ -82,7 +82,7 @@ export default function SignUp({ navigation }: AuthScreenProps<'SignUp'>) {
 
         <TouchableOpacity
           className="mt-4"
-          onPress={() => navigation.navigate('SignIn')}
+          onPress={() => navigation.navigate('Login')}
         >
           <Text className="text-center text-gray-600">
             Already have an account?{' '}

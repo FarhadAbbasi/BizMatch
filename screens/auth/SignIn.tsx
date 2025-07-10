@@ -7,7 +7,7 @@ import { useSession } from '../../stores/useSession';
 // import { useGoogleAuth } from '../../services/google';
 // import { useLinkedInAuth } from '../../services/linkedin';
 
-export default function SignIn({ navigation }: AuthScreenProps<'SignIn'>) {
+export default function SignIn({ navigation }: AuthScreenProps<'Login'>) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -71,13 +71,13 @@ export default function SignIn({ navigation }: AuthScreenProps<'SignIn'>) {
     <View className="flex-1 bg-white p-4">
       <View className="flex-1 justify-center">
         <Image
-          source={require('../../assets/logo.png')}
-          className="w-32 h-32 self-center mb-8"
+          source={require('../../assets/bizmatch.png')}
+          className="w-32 h-32 self-center mb-4"
           resizeMode="contain"
         />
         
-        <Text className="text-3xl font-bold text-center mb-8">
-          Welcome to BizMatch
+        <Text className="text-2xl text-sky-900 font-bold text-center mb-8">
+          Welcome to BizMatch!
         </Text>
 
         <TextInput
@@ -137,7 +137,7 @@ export default function SignIn({ navigation }: AuthScreenProps<'SignIn'>) {
 
         <TouchableOpacity
           className="mt-4"
-          onPress={() => navigation.navigate('SignUp')}
+          onPress={() => navigation.navigate('Register')}
         >
           <Text className="text-center text-gray-600">
             Don't have an account?{' '}

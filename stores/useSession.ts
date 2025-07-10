@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '../services/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface SessionState {
   user: User | null;
@@ -9,9 +10,9 @@ interface SessionState {
   error: string | null;
   setUser: (user: User | null) => void;
   setLoading: (isLoading: boolean) => void;
-  setOnboardingComplete: (completed: boolean) => void;
+  setOnboardingComplete: (completed: boolean) => Promise<void>;
   setError: (error: string | null) => void;
-  reset: () => void;
+  reset: () => Promise<void>;
   initialize: () => Promise<void>;
 }
 
@@ -22,25 +23,40 @@ export const useSession = create<SessionState>((set, get) => ({
   error: null,
   setUser: (user) => set({ user, error: null }),
   setLoading: (isLoading) => set({ isLoading }),
-  setOnboardingComplete: (completed) => set({ hasCompletedOnboarding: completed }),
+  setOnboardingComplete: async (completed) => {
+    await AsyncStorage.setItem('hasCompletedOnboarding', String(completed));
+    set({ hasCompletedOnboarding: completed });
+  },
   setError: (error) => set({ error }),
-  reset: () => set({ 
-    user: null, 
-    isLoading: false, 
-    hasCompletedOnboarding: false, 
-    error: null 
-  }),
+  reset: async () => {
+    await AsyncStorage.removeItem('hasCompletedOnboarding');
+    set({ 
+      user: null, 
+      isLoading: false, 
+      hasCompletedOnboarding: false, 
+      error: null 
+    });
+  },
   initialize: async () => {
     try {
       set({ isLoading: true, error: null });
-      const { data: { session }, error } = await supabase.auth.getSession();
       
+      // Get session
+      const { data: { session }, error } = await supabase.auth.getSession();
       if (error) throw error;
       
       const currentUser = session?.user ?? null;
       set({ user: currentUser });
 
       if (currentUser) {
+        // Check if user has completed onboarding before
+        const storedOnboarding = await AsyncStorage.getItem('hasCompletedOnboarding');
+        if (storedOnboarding === 'true') {
+          set({ hasCompletedOnboarding: true });
+          return;
+        }
+
+        // If no stored onboarding state, check if user has a profile
         const { data: profile, error: profileError } = await supabase
           .from('business_profiles')
           .select('id')
@@ -51,7 +67,11 @@ export const useSession = create<SessionState>((set, get) => ({
           throw profileError;
         }
 
-        set({ hasCompletedOnboarding: !!profile });
+        const hasProfile = !!profile;
+        if (hasProfile) {
+          await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
+          set({ hasCompletedOnboarding: true });
+        }
       }
     } catch (error: any) {
       console.error('Session initialization error:', error);

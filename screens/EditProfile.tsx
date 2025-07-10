@@ -205,16 +205,6 @@ export default function EditProfile({ navigation }: MainScreenProps<'EditProfile
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error logging out:', error);
-      Alert.alert('Error', 'Failed to log out. Please try again.');
-    }
-  };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -224,21 +214,16 @@ export default function EditProfile({ navigation }: MainScreenProps<'EditProfile
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      contentContainerStyle={{ flexGrow: 1 }}
+      showsVerticalScrollIndicator={true}
+    >
       <View style={styles.header}>
         <Text style={styles.title}>Edit Profile</Text>
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-        >
-          <Ionicons name="log-out-outline" size={24} color="#EF4444" />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.title}>Edit Business Profile</Text>
-
         <View style={styles.formSection}>
           <Text style={styles.sectionTitle}>Basic Information</Text>
           
@@ -248,7 +233,7 @@ export default function EditProfile({ navigation }: MainScreenProps<'EditProfile
               style={styles.input}
               value={form.name}
               onChangeText={name => setForm(prev => ({ ...prev, name }))}
-              placeholder="Enter your business name"
+              placeholder="Enter business name"
             />
           </View>
 
@@ -565,8 +550,8 @@ export default function EditProfile({ navigation }: MainScreenProps<'EditProfile
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: 'white',
+    flexGrow: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -586,18 +571,9 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '600',
   },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-  },
-  logoutText: {
-    marginLeft: 8,
-    color: '#EF4444',
-    fontWeight: '500',
-  },
   content: {
     padding: 20,
+    paddingBottom: 100, // Add extra padding at the bottom
   },
   formSection: {
     marginBottom: 32,

@@ -2,7 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MainStackParamList, MainTabParamList } from './types';
-import { StyleSheet, Platform, View } from 'react-native';
+import { StyleSheet, Platform, View, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,9 +19,25 @@ import { useColors } from '../theme/ThemeProvider';
 const Stack = createNativeStackNavigator<MainStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
+const isWeb = Platform.OS === 'web';
+const isIOS = Platform.OS === 'ios';
+const isAndroid = Platform.OS === 'android';
+
 function MainTabs() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const window = Dimensions.get('window');
+  const isSmallDevice = window.height < 700;
+
+  const tabBarHeight = isIOS ? 88 : 64;
+  const bottomInset = isWeb ? 0 : insets.bottom;
+  const extraPadding = isSmallDevice ? 8 : 16;
+
+  const getTabBarPadding = () => {
+    if (isIOS) return 30 + bottomInset;
+    if (isAndroid) return 12 + bottomInset;
+    return 12;
+  };
 
   return (
     <Tab.Navigator 
@@ -30,8 +46,8 @@ function MainTabs() {
         tabBarStyle: [
           styles.tabBar,
           {
-            height: Platform.OS === 'ios' ? 88 : 64,
-            paddingBottom: Platform.OS === 'ios' ? 30 : 12,
+            height: tabBarHeight + bottomInset,
+            paddingBottom: getTabBarPadding(),
             paddingTop: 12,
             backgroundColor: 'white',
             borderTopWidth: 0,
@@ -43,11 +59,8 @@ function MainTabs() {
             shadowOpacity: 0.05,
             shadowRadius: 4,
             elevation: 5,
-            marginBottom: Platform.select({
-              android: insets.bottom > 0 ? 0 : 16,
-              ios: 0
-            }),
-            paddingHorizontal: 16
+            paddingHorizontal: 16,
+            marginBottom: isWeb ? extraPadding : 0,
           }
         ],
         tabBarActiveTintColor: colors.primary[800],
@@ -55,7 +68,7 @@ function MainTabs() {
         tabBarShowLabel: true,
         tabBarLabelStyle: [
           styles.tabLabel,
-          Platform.OS === 'android' && { marginBottom: 4 }
+          isAndroid && { marginBottom: 4 }
         ],
         lazy: true,
         tabBarHideOnKeyboard: true,

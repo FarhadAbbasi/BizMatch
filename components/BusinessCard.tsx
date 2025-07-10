@@ -96,7 +96,7 @@ export function BusinessCard({
 
   return (
     <TouchableOpacity 
-      className="w-[92%] h-[95%] mx-auto rounded-2xl overflow-hidden bg-white shadow-lg"
+      className="w-[92%] h-[90%] mx-auto rounded-2xl overflow-hidden bg-white shadow-lg"
       onPress={onPress}
       activeOpacity={0.98}
     >
