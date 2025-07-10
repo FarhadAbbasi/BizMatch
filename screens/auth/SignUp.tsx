@@ -4,7 +4,7 @@ import { AuthScreenProps } from '../../navigation/types';
 import { supabase } from '../../services/supabase';
 import { useSession } from '../../stores/useSession';
 
-export default function SignUp({ navigation }: AuthScreenProps<'SignUp'>) {
+export default function SignUp({ navigation }: AuthScreenProps<'Register'>) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -19,17 +19,16 @@ export default function SignUp({ navigation }: AuthScreenProps<'SignUp'>) {
 
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
       });
       if (error) throw error;
       
-      Alert.alert(
-        'Success',
-        'Registration successful! Please check your email for verification.'
-      );
-      navigation.navigate('Login');
+      // If signup successful, navigate to profile creation
+      if (data.user) {
+        navigation.navigate('CreateProfile');
+      }
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'An error occurred');
       setError(error instanceof Error ? error.message : 'An error occurred');

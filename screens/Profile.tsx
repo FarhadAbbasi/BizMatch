@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, StyleSheet, Platform, Dimensions, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, Platform, Dimensions, Alert } from 'react-native';
 import { TabScreenProps } from '../navigation/types';
 import { supabase } from '../services/supabase';
 import { useSession } from '../stores/useSession';
@@ -8,6 +8,7 @@ import { Card } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { format } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenContainer } from '../components/ScreenContainer';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -51,6 +52,11 @@ export default function ProfileScreen({ navigation }: TabScreenProps<'ProfileTab
     }
   };
 
+  const navigateToEditProfile = () => {
+    // @ts-ignore - TODO: Fix navigation types
+    navigation.navigate('EditProfile');
+  };
+
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center">
@@ -59,29 +65,21 @@ export default function ProfileScreen({ navigation }: TabScreenProps<'ProfileTab
     );
   }
 
+  // Since profile creation is now handled at the root level,
+  // this case should never happen, but we'll keep a simple error state just in case
   if (!profile) {
     return (
       <View className="flex-1 justify-center items-center p-4">
-        <Text className="text-xl font-semibold text-center mb-2">Welcome to BizMatch!</Text>
+        <Text className="text-xl font-semibold text-center mb-2">Error Loading Profile</Text>
         <Text className="text-base text-center text-neutral-600 mb-6">
-          Create your business profile to start matching with potential partners.
+          There was an error loading your profile. Please try again later.
         </Text>
-        <TouchableOpacity
-          className="bg-primary-500 px-6 py-3 rounded-lg"
-          onPress={() => navigation.navigate('EditProfile')}
-        >
-          <Text className="text-white font-semibold">Create Profile</Text>
-        </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <ScrollView 
-      style={styles.container}
-      contentContainerStyle={{ flexGrow: 1 }}
-      showsVerticalScrollIndicator={true}
-    >
+    <ScreenContainer>
       {/* Banner and Logo */}
       <View style={styles.bannerContainer}>
         <Image
@@ -108,7 +106,7 @@ export default function ProfileScreen({ navigation }: TabScreenProps<'ProfileTab
           <View style={styles.headerButtons}>
             <TouchableOpacity
               style={styles.editButton}
-              onPress={() => navigation.navigate('EditProfile')}
+              onPress={navigateToEditProfile}
             >
               <Text style={styles.editButtonText}>Edit Profile</Text>
             </TouchableOpacity>
@@ -229,7 +227,7 @@ export default function ProfileScreen({ navigation }: TabScreenProps<'ProfileTab
           </View>
         )}
       </View>
-    </ScrollView>
+    </ScreenContainer>
   );
 }
 

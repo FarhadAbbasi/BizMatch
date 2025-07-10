@@ -1,39 +1,26 @@
 import 'react-native-url-polyfill/auto';
-import 'react-native-gesture-handler';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { RootNavigator } from './navigation/RootNavigator';
-import { ThemeProvider } from './theme/ThemeProvider';
 import { supabase } from './services/supabase';
 import { useSession } from './stores/useSession';
+import { ThemeProvider } from './theme/ThemeProvider';
 import './global.css';
 
 export default function App() {
-  const { setUser, setOnboardingComplete } = useSession();
+  const { setUser } = useSession();
 
   useEffect(() => {
-    // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user);
-        // Check if user has completed onboarding
-        supabase
-          .from('business_profiles')
-          .select('id')
-          .eq('owner_uid', session.user.id)
-          .single()
-          .then(({ data }) => {
-            setOnboardingComplete(!!data);
-          });
+    // Set up Supabase auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user ?? null);
       }
-    });
+    );
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      if (!session?.user) {
-        setOnboardingComplete(false);
-      }
     });
 
     return () => {
