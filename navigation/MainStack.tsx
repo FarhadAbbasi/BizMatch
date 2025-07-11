@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SwiperScreen from '../screens/Swiper';
 import BusinessDetailsScreen from '../screens/BusinessDetails';
 import ChatScreen from '../screens/Chat';
-import ChatListScreen from '../screens/ChatList';
+import ConnectionsScreen from '../screens/Connections';
 import FiltersScreen from '../screens/Filters';
 import ProfileScreen from '../screens/Profile';
 import EditProfileScreen from '../screens/EditProfile';
@@ -19,107 +19,76 @@ import { useColors } from '../theme/ThemeProvider';
 const Stack = createNativeStackNavigator<MainStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-const isWeb = Platform.OS === 'web';
-const isIOS = Platform.OS === 'ios';
-const isAndroid = Platform.OS === 'android';
-
 function MainTabs() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const window = Dimensions.get('window');
   const isSmallDevice = window.height < 700;
 
-  const tabBarHeight = isIOS ? 88 : 64;
-  const bottomInset = isWeb ? 0 : insets.bottom;
-  const extraPadding = isSmallDevice ? 8 : 16;
-
-  const getTabBarPadding = () => {
-    if (isIOS) return 30 + bottomInset;
-    if (isAndroid) return 12 + bottomInset;
-    return 12;
-  };
+  const tabBarHeight = Platform.OS === 'ios' ? 88 : 64;
+  const bottomInset = Platform.OS === 'web' ? 0 : insets.bottom;
 
   return (
-    <Tab.Navigator 
-      screenOptions={{ 
+    <Tab.Navigator
+      screenOptions={{
         headerShown: false,
-        tabBarStyle: [
-          styles.tabBar,
-          {
-            height: tabBarHeight + bottomInset,
-            paddingBottom: getTabBarPadding(),
-            paddingTop: 12,
-            backgroundColor: 'white',
-            borderTopWidth: 0,
-            shadowColor: '#000',
-            shadowOffset: {
-              width: 0,
-              height: -2,
-            },
-            shadowOpacity: 0.05,
-            shadowRadius: 4,
-            elevation: 5,
-            paddingHorizontal: 16,
-            marginBottom: isWeb ? extraPadding : 0,
-          }
-        ],
-        tabBarActiveTintColor: colors.primary[800],
-        tabBarInactiveTintColor: colors.neutral[300],
-        tabBarShowLabel: true,
-        tabBarLabelStyle: [
-          styles.tabLabel,
-          isAndroid && { marginBottom: 4 }
-        ],
-        lazy: true,
-        tabBarHideOnKeyboard: true,
+        tabBarStyle: {
+          height: tabBarHeight + bottomInset,
+          paddingBottom: Platform.OS === 'ios' ? 30 + bottomInset : 12 + bottomInset,
+          paddingTop: 12,
+          backgroundColor: 'white',
+          borderTopWidth: 0,
+          shadowColor: '#000',
+          shadowOffset: {
+            width: 0,
+            height: -4,
+          },
+          shadowOpacity: 0.05,
+          shadowRadius: 8,
+          elevation: 5,
+        },
+        tabBarActiveTintColor: colors.primary[500],
+        tabBarInactiveTintColor: colors.neutral[400],
       }}
     >
       <Tab.Screen
         name="SwiperTab"
         component={SwiperScreen}
-        options={{ 
-          title: 'Discover',
+        options={{
+          tabBarLabel: 'Discover',
           tabBarIcon: ({ color, size }) => (
-            <View style={styles.iconContainer}>
-              <Ionicons name="grid" size={size} color={color} />
-            </View>
-          )
+            <Ionicons name="search" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="ConnectionsTab"
+        component={ConnectionsScreen}
+        options={{
+          tabBarLabel: 'Connections',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="people" size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen
         name="FiltersTab"
         component={FiltersScreen}
-        options={{ 
-          title: 'Filters',
+        options={{
+          tabBarLabel: 'Filters',
           tabBarIcon: ({ color, size }) => (
-            <View style={styles.iconContainer}>
-              <Ionicons name="options" size={size} color={color} />
-            </View>
-          )
-        }}
-      />
-      <Tab.Screen
-        name="ChatsTab"
-        component={ChatListScreen}
-        options={{ 
-          title: 'Chats',
-          tabBarIcon: ({ color, size }) => (
-            <View style={styles.iconContainer}>
-              <Ionicons name="chatbubbles" size={size} color={color} />
-            </View>
-          )
+            <Ionicons name="options" size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen
         name="ProfileTab"
         component={ProfileScreen}
-        options={{ 
-          title: 'Profile',
+        options={{
+          tabBarLabel: 'Profile',
           tabBarIcon: ({ color, size }) => (
-            <View style={styles.iconContainer}>
-              <Ionicons name="person" size={size} color={color} />
-            </View>
-          )
+            <Ionicons name="person" size={size} color={color} />
+          ),
         }}
       />
     </Tab.Navigator>
@@ -128,11 +97,39 @@ function MainTabs() {
 
 export function MainStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="MainTabs" component={MainTabs} />
-      <Stack.Screen name="BusinessDetails" component={BusinessDetailsScreen} />
-      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-      <Stack.Screen name="Chat" component={ChatScreen} />
+    <Stack.Navigator>
+      <Stack.Screen 
+        name="MainTabs" 
+        component={MainTabs}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="BusinessDetails"
+        component={BusinessDetailsScreen}
+        options={{
+          headerTitle: '',
+          headerShadowVisible: false,
+          headerBackTitle: 'Back',
+        }}
+      />
+      <Stack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{
+          headerTitle: 'Edit Profile',
+          headerShadowVisible: false,
+          headerBackTitle: 'Back',
+        }}
+      />
+      <Stack.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={{
+          headerTitle: '',
+          headerShadowVisible: false,
+          headerBackTitle: 'Back',
+        }}
+      />
     </Stack.Navigator>
   );
 }
@@ -144,15 +141,4 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  tabLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 4,
-  },
-  iconContainer: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  }
 }); 

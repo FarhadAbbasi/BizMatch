@@ -78,6 +78,7 @@ export default function EditProfile({ navigation }: MainScreenProps<'EditProfile
         const { id, owner_uid, created_at, updated_at, ...profileData } = data;
         setProfileId(id);
         setForm(profileData);
+        // console.log('Profile data:', data);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);

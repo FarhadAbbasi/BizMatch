@@ -34,7 +34,7 @@ export function RootNavigator() {
           .eq('owner_uid', user.id)
           .single();
 
-        console.log('Profile check result:', { data, error });
+        // console.log('Profile check result:', { data, error });
 
         if (isMounted) {
           if (error && error.code === 'PGRST116') {

@@ -126,7 +126,7 @@ export function BusinessCard({
               <Text className="text-base text-gray-600">{business.industry}</Text>
             </View>
             <View className="flex-row items-center gap-2">
-              <Badge
+              <Badge 
                 variant="subtle"
                 status="success"
                 label={business.funding_stage || 'Established'}
@@ -139,6 +139,17 @@ export function BusinessCard({
               </View>
             </View>
           </View>
+
+          {/* Description */}
+          {business.description && (
+            <View className="mb-3">
+              {/* <Text className="text-base text-gray-500 leading-6">{business.description}</Text> */}
+              <Text className="text-base text-gray-500 leading-6">
+              Financial technology solutions for modern banking and transactions.
+
+              </Text>
+            </View>
+          )}
 
           {/* Location */}
           <View className="mb-1.5 bg-[#f5f8f8] p-1 rounded-2xl">
