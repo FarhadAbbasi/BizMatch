@@ -11,6 +11,7 @@ import Animated, {
   useSharedValue,
   withSpring
 } from 'react-native-reanimated';
+import { supabase } from '../services/supabase';
 
 const VERTICAL_PADDING = 12;
 
@@ -35,11 +36,11 @@ export default function SwiperScreen({ navigation }: TabScreenProps<'SwiperTab'>
   }, []);
 
   const handleSwipe = async (direction: 'left' | 'right', businessId: string) => {
-    const { match, matchBusiness } = await createSwipe(businessId, direction);
+    const { match, matchBusiness, conversationId } = await createSwipe(businessId, direction);
     
-    if (match && matchBusiness) {
+    if (match && matchBusiness && conversationId) {
       navigation.navigate('Chat', {
-        matchId: `${user?.id}-${businessId}`,
+        matchId: conversationId,
         businessId: matchBusiness.id,
       });
     }

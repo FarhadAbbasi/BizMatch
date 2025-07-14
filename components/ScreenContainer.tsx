@@ -1,14 +1,20 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet, Platform } from 'react-native';
+import { View, ScrollView, StyleSheet, Platform, RefreshControl, RefreshControlProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ScreenContainerProps {
   children: React.ReactNode;
   scrollable?: boolean;
   style?: any;
+  refreshControl?: React.ReactElement<RefreshControlProps>;
 }
 
-export function ScreenContainer({ children, scrollable = true, style }: ScreenContainerProps) {
+export function ScreenContainer({ 
+  children, 
+  scrollable = true, 
+  style,
+  refreshControl 
+}: ScreenContainerProps) {
   const insets = useSafeAreaInsets();
   
   // Calculate bottom padding based on platform and safe area
@@ -27,6 +33,7 @@ export function ScreenContainer({ children, scrollable = true, style }: ScreenCo
         flexGrow: 1,
         paddingBottom: bottomPadding
       } : undefined}
+      refreshControl={scrollable ? refreshControl : undefined}
     >
       {children}
     </Container>

@@ -46,7 +46,11 @@ interface SwipeState {
   setFilters: (filters: SwipeState['filters']) => void;
   setCurrentIndex: (index: number) => void;
   fetchBusinesses: () => Promise<void>;
-  createSwipe: (businessId: string, direction: 'left' | 'right') => Promise<{ match: boolean; matchBusiness: BusinessProfile | null }>;
+  createSwipe: (businessId: string, direction: 'left' | 'right') => Promise<{ 
+    match: boolean; 
+    matchBusiness: BusinessProfile | null;
+    conversationId: string | null;
+  }>;
 }
 
 export const useSwipe = create<SwipeState>((set, get) => ({

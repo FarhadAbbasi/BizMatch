@@ -35,17 +35,28 @@ CREATE TABLE swipes (
 );
 
 -- Create matches view for easier querying
+DROP VIEW IF EXISTS matches;
 CREATE VIEW matches AS
+WITH business_swipes AS (
+    SELECT 
+        s.swiper_uid,
+        s.target_business_id,
+        s.direction,
+        s.created_at,
+        bp.owner_uid as target_owner_uid
+    FROM swipes s
+    JOIN business_profiles bp ON bp.id = s.target_business_id
+)
 SELECT 
     a.swiper_uid as user_a,
     b.swiper_uid as user_b,
     a.target_business_id as business_a,
     b.target_business_id as business_b,
     GREATEST(a.created_at, b.created_at) as matched_at
-FROM swipes a
-JOIN swipes b ON 
-    a.swiper_uid = b.target_business_id AND
-    b.swiper_uid = a.target_business_id AND
+FROM business_swipes a
+JOIN business_swipes b ON 
+    a.swiper_uid = b.target_owner_uid AND
+    b.swiper_uid = a.target_owner_uid AND
     a.direction = 'right' AND
     b.direction = 'right';
 
@@ -101,3 +112,102 @@ BEGIN
     WHERE id = business_id;
 END;
 $$ LANGUAGE plpgsql; 
+
+-- Create conversations table
+CREATE TABLE conversations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    business_a_id UUID NOT NULL REFERENCES business_profiles(id),
+    business_b_id UUID NOT NULL REFERENCES business_profiles(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Create messages table
+CREATE TABLE messages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    conversation_id UUID NOT NULL REFERENCES conversations(id),
+    sender_id UUID NOT NULL REFERENCES business_profiles(id),
+    content TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('text', 'image', 'file')),
+    is_read BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Create indexes for conversations and messages
+CREATE INDEX conversations_business_a_id_idx ON conversations(business_a_id);
+CREATE INDEX conversations_business_b_id_idx ON conversations(business_b_id);
+CREATE INDEX messages_conversation_id_idx ON messages(conversation_id);
+CREATE INDEX messages_sender_id_idx ON messages(sender_id);
+
+-- Enable RLS on new tables
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for conversations
+CREATE POLICY "Users can view conversations they are part of"
+    ON conversations FOR SELECT
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM business_profiles bp
+            WHERE bp.owner_uid = auth.uid()
+            AND (bp.id = business_a_id OR bp.id = business_b_id)
+        )
+    );
+
+CREATE POLICY "Users can insert conversations they are part of"
+    ON conversations FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM business_profiles bp
+            WHERE bp.owner_uid = auth.uid()
+            AND (bp.id = business_a_id OR bp.id = business_b_id)
+        )
+    );
+
+-- RLS Policies for messages
+CREATE POLICY "Users can view messages in their conversations"
+    ON messages FOR SELECT
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM conversations c
+            JOIN business_profiles bp ON (bp.id = c.business_a_id OR bp.id = c.business_b_id)
+            WHERE c.id = conversation_id
+            AND bp.owner_uid = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can insert messages in their conversations"
+    ON messages FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM conversations c
+            JOIN business_profiles bp ON (bp.id = c.business_a_id OR bp.id = c.business_b_id)
+            WHERE c.id = conversation_id
+            AND bp.owner_uid = auth.uid()
+            AND bp.id = sender_id
+        )
+    );
+
+CREATE POLICY "Users can update message read status in their conversations"
+    ON messages FOR UPDATE
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM conversations c
+            JOIN business_profiles bp ON (bp.id = c.business_a_id OR bp.id = c.business_b_id)
+            WHERE c.id = conversation_id
+            AND bp.owner_uid = auth.uid()
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM conversations c
+            JOIN business_profiles bp ON (bp.id = c.business_a_id OR bp.id = c.business_b_id)
+            WHERE c.id = conversation_id
+            AND bp.owner_uid = auth.uid()
+        )
+    ); 

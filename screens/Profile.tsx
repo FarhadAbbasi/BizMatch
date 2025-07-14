@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, Platform, Dimensions, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, Platform, Dimensions, Alert, RefreshControl } from 'react-native';
 import { TabScreenProps } from '../navigation/types';
 import { supabase } from '../services/supabase';
 import { useSession } from '../stores/useSession';
@@ -9,17 +9,26 @@ import { Badge } from '../components/Badge';
 import { format } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../components/ScreenContainer';
+import { useColors } from '../theme/ThemeProvider';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function ProfileScreen({ navigation }: TabScreenProps<'ProfileTab'>) {
   const { user, reset } = useSession();
+  const colors = useColors();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
 
   useEffect(() => {
     fetchProfile();
   }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchProfile();
+    setRefreshing(false);
+  };
 
   const fetchProfile = async () => {
     try {
@@ -79,7 +88,14 @@ export default function ProfileScreen({ navigation }: TabScreenProps<'ProfileTab
   }
 
   return (
-    <ScreenContainer>
+    <ScreenContainer refreshControl={
+      <RefreshControl
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        colors={[colors.primary[500]]}
+        tintColor={colors.primary[500]}
+      />
+    }>
       {/* Banner and Logo */}
       <View style={styles.bannerContainer}>
         <Image

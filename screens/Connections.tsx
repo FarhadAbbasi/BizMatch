@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet, Dimensions, RefreshControl, Alert, Platform } from 'react-native';
 import { TabScreenProps } from '../navigation/types';
 import { supabase } from '../services/supabase';
 import { useSession } from '../stores/useSession';
@@ -23,6 +23,48 @@ interface ConnectionBusiness extends Partial<BusinessProfile> {
 interface SegmentedControlProps {
   selectedIndex: number;
   onSelect: (index: number) => void;
+}
+
+interface SwipeData {
+  target_business: {
+    id: string;
+    name: string;
+    industry: string;
+    logo_url?: string;
+    description?: string;
+  };
+}
+
+interface MatchData {
+  business_b: {
+    id: string;
+    name: string;
+    industry: string;
+    logo_url?: string;
+    description?: string;
+  };
+  owner_uid: string;
+}
+
+interface MatchResponse {
+  business_b: {
+    id: string;
+    name: string;
+    industry: string;
+    logo_url?: string;
+    description?: string;
+    owner_uid: string;
+  };
+}
+
+interface SwipeResponse {
+  target_business: {
+    id: string;
+    name: string;
+    industry: string;
+    logo_url?: string;
+    description?: string;
+  };
 }
 
 function SegmentedControl({ selectedIndex, onSelect }: SegmentedControlProps) {
@@ -61,34 +103,53 @@ function SegmentedControl({ selectedIndex, onSelect }: SegmentedControlProps) {
 function ConnectionCard({ business, onPress }: { business: ConnectionBusiness; onPress: () => void }) {
   return (
     <TouchableOpacity 
-      className="flex-row items-center p-3 mx-4 mb-3 bg-white rounded-xl shadow-sm border border-neutral-100"
+      className="flex-row items-center p-3 mx-4 mb-3 bg-white rounded-xl"
+      style={Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 3,
+        },
+        android: {
+          elevation: 3,
+        }
+      })}
       onPress={onPress}
     >
       {/* Logo/Image */}
-      <View className="w-16 h-16 rounded-xl overflow-hidden bg-neutral-100 mr-3">
-        <Image
-          source={{ uri: business.logo_url }}
-          className="w-full h-full"
-          resizeMode="cover"
-        />
+      <View className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 mr-3">
+        {business.logo_url ? (
+          <Image
+            source={{ uri: business.logo_url }}
+            className="w-full h-full"
+            resizeMode="cover"
+          />
+        ) : (
+          <View className="w-full h-full bg-gray-100 items-center justify-center">
+            <Text className="text-xl font-semibold text-gray-400">
+              {business.name.charAt(0)}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Info */}
       <View className="flex-1">
         <View className="flex-row items-center justify-between mb-1">
-          <Text className="text-base font-semibold text-neutral-900">{business.name}</Text>
+          <Text className="text-base font-semibold text-gray-900">{business.name}</Text>
           {business.last_message_at && (
-            <Text className="text-xs text-neutral-500">
+            <Text className="text-xs text-gray-500">
               {format(new Date(business.last_message_at), 'MMM d')}
             </Text>
           )}
         </View>
         
         <View className="flex-row items-center mb-1">
-          <Text className="text-sm text-neutral-500 mr-2">{business.industry}</Text>
+          <Text className="text-sm text-gray-500 mr-2">{business.industry}</Text>
           {business.is_match && (
-            <View className="px-2 py-0.5 bg-accent-success/10 rounded-full">
-              <Text className="text-xs text-accent-success font-medium">Match</Text>
+            <View className="px-2 py-0.5 bg-green-50 rounded-full">
+              <Text className="text-xs text-green-600 font-medium">Match</Text>
             </View>
           )}
         </View>
@@ -96,13 +157,13 @@ function ConnectionCard({ business, onPress }: { business: ConnectionBusiness; o
         {business.last_message && (
           <View className="flex-row items-center justify-between">
             <Text 
-              className="text-sm text-neutral-500 flex-1"
+              className="text-sm text-gray-500 flex-1"
               numberOfLines={1}
             >
               {business.last_message}
             </Text>
             {business.unread_count ? (
-              <View className="w-5 h-5 rounded-full bg-primary-500 ml-2 items-center justify-center">
+              <View className="w-5 h-5 rounded-full bg-blue-500 ml-2 items-center justify-center">
                 <Text className="text-xs text-white font-medium">
                   {business.unread_count}
                 </Text>
@@ -120,12 +181,19 @@ export default function ConnectionsScreen({ navigation }: TabScreenProps<'Connec
   const colors = useColors();
   const [selectedSegment, setSelectedSegment] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [potentialConnections, setPotentialConnections] = useState<ConnectionBusiness[]>([]);
   const [matches, setMatches] = useState<ConnectionBusiness[]>([]);
 
   useEffect(() => {
     fetchConnections();
   }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchConnections();
+    setRefreshing(false);
+  };
 
   const fetchConnections = async () => {
     try {
@@ -138,9 +206,32 @@ export default function ConnectionsScreen({ navigation }: TabScreenProps<'Connec
         .eq('owner_uid', user?.id)
         .single();
 
+      console.log('User profile:', userProfile);
       if (!userProfile) return;
 
-      // Fetch potential connections (right swipes)
+      // Fetch matches first
+      const { data: matchesData } = await supabase
+        .from('matches')
+        .select(`
+          business_b:business_b (
+            id,
+            name,
+            industry,
+            logo_url,
+            description,
+            owner_uid
+          )
+        `)
+        .eq('user_a', user?.id)
+        .order('matched_at', { ascending: false }) as { data: MatchResponse[] | null };
+
+      console.log('Matches data:', matchesData);
+
+      // Get all matched business IDs
+      const matchedBusinessIds = (matchesData || []).map(match => match.business_b.id);
+      console.log('Matched business IDs:', matchedBusinessIds);
+
+      // Fetch potential matches (right swipes that aren't matches)
       const { data: potentialData } = await supabase
         .from('swipes')
         .select(`
@@ -153,38 +244,40 @@ export default function ConnectionsScreen({ navigation }: TabScreenProps<'Connec
           )
         `)
         .eq('swiper_uid', user?.id)
-        .eq('direction', 'right');
+        .eq('direction', 'right')
+        .not('target_business_id', 'eq', userProfile.id) as { data: SwipeResponse[] | null }; // Exclude our own business
 
-      // Fetch matches with last message
-      const { data: matchesData } = await supabase
-        .from('conversation_details')
-        .select('*')
-        .or(`business_a_id.eq.${userProfile.id},business_b_id.eq.${userProfile.id}`)
-        .order('last_message_at', { ascending: false });
+      console.log('Raw potential data:', potentialData);
 
-      // Transform the data
-      const potential = (potentialData?.map(item => ({
+      // Filter out matched businesses from potential matches manually
+      const potentialFiltered = (potentialData || []).filter(
+        item => !matchedBusinessIds.includes(item.target_business.id)
+      );
+      console.log('Filtered potential data:', potentialFiltered);
+
+      // Transform the potential matches data
+      const potential = potentialFiltered.map((item: SwipeResponse) => ({
         id: item.target_business.id,
         name: item.target_business.name,
         industry: item.target_business.industry,
         logo_url: item.target_business.logo_url,
         description: item.target_business.description,
         is_match: false
-      })) || []) as ConnectionBusiness[];
+      }));
 
-      const matchedBusinesses = (matchesData?.map(conv => {
-        const isBusinessA = conv.business_a_id === userProfile.id;
-        return {
-          id: isBusinessA ? conv.business_b_id : conv.business_a_id,
-          name: isBusinessA ? conv.business_b_name : conv.business_a_name,
-          logo_url: isBusinessA ? conv.business_b_logo : conv.business_a_logo,
-          industry: isBusinessA ? conv.business_b_industry : conv.business_a_industry,
-          last_message: conv.last_message_content,
-          last_message_at: conv.last_message_at || conv.conversation_created_at,
-          is_match: true,
-          conversation_id: conv.conversation_id
-        } as ConnectionBusiness;
-      }) || []) as ConnectionBusiness[];
+      // Transform matches data - business_b is always the other business
+      const matchedBusinesses = (matchesData || []).map((match: MatchResponse) => ({
+        id: match.business_b.id,
+        name: match.business_b.name,
+        industry: match.business_b.industry,
+        logo_url: match.business_b.logo_url,
+        description: match.business_b.description,
+        owner_uid: match.business_b.owner_uid,
+        is_match: true
+      }));
+
+      console.log('Final potential connections:', potential);
+      console.log('Final matched businesses:', matchedBusinesses);
 
       setPotentialConnections(potential);
       setMatches(matchedBusinesses);
@@ -195,13 +288,73 @@ export default function ConnectionsScreen({ navigation }: TabScreenProps<'Connec
     }
   };
 
-  const handleConnectionPress = (business: ConnectionBusiness) => {
-    if (business.is_match && business.conversation_id) {
-      navigation.navigate('Chat', { 
-        matchId: business.conversation_id,
-        businessId: business.id
-      });
+  const handleConnectionPress = async (business: ConnectionBusiness) => {
+    console.log('Pressed business:', business);
+    
+    if (business.is_match) {
+      try {
+        // Get our business profile
+        const { data: userProfile, error: profileError } = await supabase
+          .from('business_profiles')
+          .select('id')
+          .eq('owner_uid', user?.id)
+          .single();
+
+        if (profileError) throw profileError;
+
+        // Check if conversation exists - check both directions
+        const { data: existingConversation, error: convError } = await supabase
+          .from('conversations')
+          .select('id')
+          .or(
+            `and(user_a.eq.${user?.id},user_b.eq.${business.owner_uid},business_a.eq.${userProfile.id},business_b.eq.${business.id}),` +
+            `and(user_b.eq.${user?.id},user_a.eq.${business.owner_uid},business_b.eq.${userProfile.id},business_a.eq.${business.id})`
+          )
+          .single();
+
+        console.log('Existing conversation check:', { existingConversation, convError });
+
+        if (convError && convError.code !== 'PGRST116') {
+          throw convError;
+        }
+
+        let conversationId = existingConversation?.id;
+
+        // If no conversation exists, create one
+        if (!conversationId) {
+          console.log('No existing conversation found, creating new one');
+
+          // Create new conversation
+          const { data: newConversation, error: conversationError } = await supabase
+            .from('conversations')
+            .insert({
+              user_a: user?.id,
+              user_b: business.owner_uid,
+              business_a: userProfile.id,
+              business_b: business.id
+            })
+            .select('id')
+            .single();
+
+          if (conversationError) throw conversationError;
+          
+          console.log('Created new conversation:', newConversation.id);
+          conversationId = newConversation.id;
+        } else {
+          console.log('Using existing conversation:', conversationId);
+        }
+
+        // Navigate to chat with the conversation ID
+        navigation.navigate('Chat', { 
+          matchId: conversationId,
+          businessId: business.id
+        });
+      } catch (error) {
+        console.error('Error handling conversation:', error);
+        Alert.alert('Error', 'Failed to open conversation');
+      }
     } else {
+      // For potential matches, show business details
       navigation.navigate('BusinessDetails', { id: business.id });
     }
   };
@@ -235,6 +388,14 @@ export default function ConnectionsScreen({ navigation }: TabScreenProps<'Connec
             renderItem={renderConnection}
             keyExtractor={item => item.id}
             contentContainerStyle={{ paddingVertical: 8, flexGrow: 1 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[colors.primary[500]]}
+                tintColor={colors.primary[500]}
+              />
+            }
             ListEmptyComponent={
               <View className="flex-1 justify-center items-center pt-8">
                 <Text className="text-neutral-500">

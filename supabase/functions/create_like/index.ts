@@ -6,12 +6,37 @@ interface SwipeRequest {
   direction: 'left' | 'right';
 }
 
+interface MatchResult {
+  is_match: boolean;
+  conversation_id: string | null;
+  matched_business_id: string | null;
+  matched_user_id: string | null;
+}
+
+// Define CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   try {
+    // Verify request method
+    if (req.method !== 'POST') {
+      throw new Error('Method not allowed');
+    }
+
     // Create a Supabase client with the Auth context of the logged in user
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? 'https://nazwjoeruujlkqvduqzn.supabase.co',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hendqb2VydXVqbGtxdmR1cXpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUwNjU4NTAsImV4cCI6MjA2MDY0MTg1MH0.fZDxWJRvbU3Qwl0mXAqMVTmvU62kLTujQQi3FIVVt8Y',
+      // Use environment variables without fallbacks in production
+      Deno.env.get('URL')!,
+      Deno.env.get('ANON_KEY')!,
       {
         global: {
           headers: { Authorization: req.headers.get('Authorization')! },
@@ -26,14 +51,34 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({ 
+          error: 'Unauthorized',
+          details: userError?.message || 'No user session found'
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
-    // Get the request body
-    const { business_id, direction }: SwipeRequest = await req.json();
+    // Parse and validate request body
+    const body = await req.json().catch(() => null);
+    if (!body || !body.business_id || !body.direction || !['left', 'right'].includes(body.direction)) {
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid request',
+          details: 'Required fields: business_id (string) and direction ("left" | "right")'
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    const { business_id, direction }: SwipeRequest = body;
 
     // Insert the swipe
     const { error: swipeError } = await supabaseClient
@@ -50,28 +95,40 @@ serve(async (req) => {
 
     // If it's a right swipe, check for a match
     if (direction === 'right') {
-      // Check if there's a reciprocal right swipe
-      const { data: matchData, error: matchError } = await supabaseClient
-        .from('swipes')
-        .select('*, business_profiles(*)')
-        .eq('swiper_uid', business_id)
-        .eq('target_business_id', user.id)
-        .eq('direction', 'right')
+      // Call our match handling function
+      const { data: matchResult, error: matchError } = await supabaseClient
+        .rpc('handle_potential_match', {
+          swiper_uid: user.id,
+          target_business_id: business_id,
+        })
         .single();
 
       if (matchError) {
         throw matchError;
       }
 
-      // If there's a match, return the matched business profile
-      if (matchData) {
+      const result = matchResult as MatchResult;
+
+      if (result.is_match) {
+        // Get the matched business details
+        const { data: matchedBusiness, error: businessError } = await supabaseClient
+          .from('business_profiles')
+          .select('*')
+          .eq('id', result.matched_business_id)
+          .single();
+
+        if (businessError) {
+          throw businessError;
+        }
+
         return new Response(
           JSON.stringify({
             match: true,
-            matchBusiness: matchData.business_profiles,
+            matchBusiness: matchedBusiness,
+            conversationId: result.conversation_id,
           }),
           {
-            headers: { 'Content-Type': 'application/json' },
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           }
         );
       }
@@ -83,17 +140,21 @@ serve(async (req) => {
         match: false,
       }),
       {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   } catch (error) {
+    console.error('Error in create_like function:', error);
+    
     return new Response(
       JSON.stringify({
-        error: error.message,
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error occurred',
+        code: error.code || 'UNKNOWN'
       }),
       {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
+        status: error.status || 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   }
